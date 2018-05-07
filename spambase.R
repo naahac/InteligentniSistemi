@@ -76,7 +76,6 @@ dir <- "D:\\"
 pdfPath <- file.path(dir, "mojpdf.pdf")
 pdf(pdfPath)
 
-<<<<<<< HEAD
 hist(data$word_freq_make, main="Frequency of word make", xlab="word make", border="black", col="red", las=1)
 hist(data$word_freq_address, main="Frequency of word address", xlab="word address", border="black", col="red", las=1)
 hist(data$word_freq_all, main="Frequency of word all", xlab="word all", border="black", col="red", las=1)
@@ -96,10 +95,9 @@ hist(data$word_freq_free, main="Frequency of word free", xlab="word free", borde
 
 roc1 <- roc(data$is_spam, data$capital_run_length_average, percent=TRUE, plot=TRUE, col='blue', auc = )
 auc1 <- round(auc(roc1), 3)
-=======
+
 word_freq_make_roc <- roc(data$is_spam, data$word_freq_make, percent=TRUE, plot=TRUE)
 word_freq_make_auc <- round(auc(word_freq_make_roc), 3)
->>>>>>> fbd1522a17d5c7f7bac298556596b5d07cbb9ac2
 
 word_freq_address_roc <- roc(data$is_spam, data$word_freq_address, percent=TRUE, plot=TRUE)
 word_freq_address_auc <- round(auc(word_freq_address_roc), 3)
@@ -148,6 +146,7 @@ legend("bottomright",
                 paste("word_freq_mail_auc", word_freq_mail_auc)), 
        col=c("purple", "blue", "red", "green", "black", "brown", "orange"), lwd=2);
 
+xyplot(word_freq_free ~ word_freq_3d, data)
 
 dev.off();
 
