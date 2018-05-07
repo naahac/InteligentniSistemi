@@ -76,13 +76,57 @@ dir <- "D:\\"
 pdfPath <- file.path(dir, "mojpdf.pdf")
 pdf(pdfPath)
 
-roc1 <- roc(data$is_spam, data$capital_run_length_average, percent=TRUE, plot=TRUE, col='blue', auc = )
-auc1 <- round(auc(roc1), 3)
+word_freq_make_roc <- roc(data$is_spam, data$word_freq_make, percent=TRUE, plot=TRUE)
+word_freq_make_auc <- round(auc(word_freq_make_roc), 3)
 
-lines(roc1, col="red")
+word_freq_address_roc <- roc(data$is_spam, data$word_freq_address, percent=TRUE, plot=TRUE)
+word_freq_address_auc <- round(auc(word_freq_address_roc), 3)
+
+word_freq_all_roc <- roc(data$is_spam, data$word_freq_all, percent=TRUE, plot=TRUE)
+word_freq_all_auc <- round(auc(word_freq_all_roc), 3)
+
+word_freq_3d_roc <- roc(data$is_spam, data$word_freq_3d, percent=TRUE, plot=TRUE)
+word_freq_3d_auc <- round(auc(word_freq_3d_roc), 3)
+
+word_freq_our_roc <- roc(data$is_spam, data$word_freq_our, percent=TRUE, plot=TRUE)
+word_freq_our_auc <- round(auc(word_freq_our_roc), 3)
+
+word_freq_over_roc <- roc(data$is_spam, data$word_freq_over, percent=TRUE, plot=TRUE)
+word_freq_over_auc <- round(auc(word_freq_over_roc), 3)
+
+word_freq_remove_roc <- roc(data$is_spam, data$word_freq_remove, percent=TRUE, plot=TRUE)
+word_freq_remove_auc <- round(auc(word_freq_remove_roc), 3)
+
+word_freq_internet_roc <- roc(data$is_spam, data$word_freq_internet, percent=TRUE, plot=TRUE)
+word_freq_internet_auc <- round(auc(word_freq_internet_roc), 3)
+
+word_freq_order_roc <- roc(data$is_spam, data$word_freq_order, percent=TRUE, plot=TRUE)
+word_freq_order_auc <- round(auc(word_freq_order_roc), 3)
+
+word_freq_mail_roc <- roc(data$is_spam, data$word_freq_mail, percent=TRUE, plot=TRUE)
+word_freq_mail_auc <- round(auc(word_freq_mail_roc), 3)
+
+lines(word_freq_make_roc, col="purple")
+lines(word_freq_address_roc, col="blue")
+lines(word_freq_all_roc, col="red")
+lines(word_freq_3d_roc, col="green")
+lines(word_freq_our_roc, col="black")
+lines(word_freq_over_roc, col="brown")
+lines(word_freq_remove_roc, col="orange")
 legend("bottomright", 
-       legend=c(paste("AUC", auc1)), 
-       col=c("purple"), lwd=2);
+       legend=c(paste("word_freq_make_auc", word_freq_make_auc),
+                paste("word_freq_address_auc", word_freq_address_auc),
+                paste("word_freq_all_auc", word_freq_all_auc),
+                paste("word_freq_3d_auc", word_freq_3d_auc),
+                paste("word_freq_our_auc", word_freq_our_auc),
+                paste("word_freq_over_auc", word_freq_over_auc),
+                paste("word_freq_remove_auc", word_freq_remove_auc),
+                paste("word_freq_internet_auc", word_freq_internet_auc),
+                paste("word_freq_order_auc", word_freq_order_auc),
+                paste("word_freq_mail_auc", word_freq_mail_auc)), 
+       col=c("purple", "blue", "red", "green", "black", "brown", "orange"), lwd=2);
+
+
 dev.off();
 
 roc(data$is_spam, data$capital_run_length_total, percent=TRUE, plot=TRUE, col='blue')
@@ -94,6 +138,19 @@ set.seed(101) # Set Seed so that same sample can be reproduced in future also
 sample <- sample.int(n = nrow(data), size = floor(.75*nrow(data)), replace = F)
 train <- data[sample, ]
 test  <- data[-sample, ]
+
+#Prediction
+fit <- glm(is_spam~capital_run_length_average+capital_run_length_longest, data=train, family=binomial)
+summary(fit)
+confint(fit)# 95% CI for the coefficients
+#exp(coef(fit))# exponentiated coefficients
+#exp(confint(fit)) # 95% CI for exponentiated coefficients
+
+res = predict(fit, test, type="response")
+#res[res < 0.5] <- 0
+#res[res >= 0.5] <- 1
+
+hist(res, main="Predictions")
 
 
 
