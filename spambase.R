@@ -73,7 +73,7 @@ set.seed(101) # Set Seed so that same sample can be reproduced in future also
 # Now Selecting 75% of data as sample from total 'n' rows of the data  
 sample <- sample.int(n = nrow(data), size = floor(.75*nrow(data)), replace = F)
 train <- data[sample, ]
-test  <- data[sample, ]
+test  <- data[-sample, ]
 
 
 
