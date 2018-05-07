@@ -76,6 +76,23 @@ dir <- "D:\\"
 pdfPath <- file.path(dir, "mojpdf.pdf")
 pdf(pdfPath)
 
+hist(data$word_freq_make, main="Frequency of word make", xlab="word make", border="black", col="red", las=1)
+hist(data$word_freq_address, main="Frequency of word address", xlab="word address", border="black", col="red", las=1)
+hist(data$word_freq_all, main="Frequency of word all", xlab="word all", border="black", col="red", las=1)
+hist(data$word_freq_3d, main="Frequency of word 3d", xlab="word 3d", border="black", col="red", las=1)
+hist(data$word_freq_our, main="Frequency of word our", xlab="word our", border="black", col="red", las=1)
+hist(data$word_freq_over, main="Frequency of word over", xlab="word over", border="black", col="red", las=1)
+hist(data$word_freq_remove, main="Frequency of word remove", xlab="word remove", border="black", col="red", las=1)
+hist(data$word_freq_internet, main="Frequency of word internet", xlab="word internet", border="black", col="red", las=1)
+hist(data$word_freq_order, main="Frequency of word order", xlab="word order", border="black", col="red", las=1)
+hist(data$word_freq_mail, main="Frequency of word mail", xlab="word mail", border="black", col="red", las=1)
+hist(data$word_freq_receive, main="Frequency of word receive", xlab="word receive", border="black", col="red", las=1)
+hist(data$word_freq_will, main="Frequency of word will", xlab="word will", border="black", col="red", las=1)
+hist(data$word_freq_people, main="Frequency of word people", xlab="word people", border="black", col="red", las=1)
+hist(data$word_freq_report, main="Frequency of word report", xlab="word report", border="black", col="red", las=1)
+hist(data$word_freq_addresses, main="Frequency of word addresses", xlab="word addresses", border="black", col="red", las=1)
+hist(data$word_freq_free, main="Frequency of word free", xlab="word free", border="black", col="red", las=1)
+
 roc1 <- roc(data$is_spam, data$capital_run_length_average, percent=TRUE, plot=TRUE, col='blue', auc = )
 auc1 <- round(auc(roc1), 3)
 
@@ -87,7 +104,6 @@ dev.off();
 
 roc(data$is_spam, data$capital_run_length_total, percent=TRUE, plot=TRUE, col='blue')
 roc(data$is_spam, data$capital_run_length_average, percent=TRUE, plot=TRUE, col='red')
-roc(data$is_spam, data$capital_run_length_longest, percent=TRUE, plot=TRUE, col='purple')
 
 set.seed(101) # Set Seed so that same sample can be reproduced in future also
 # Now Selecting 75% of data as sample from total 'n' rows of the data  
