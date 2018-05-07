@@ -1,4 +1,5 @@
 library(pROC)
+library(lattice)
 
 data <- read.csv2("https://archive.ics.uci.edu/ml/machine-learning-databases/spambase/spambase.data", header=FALSE, sep=",")
 
@@ -68,6 +69,25 @@ data$"char_freq_$" <-  as.double(levels(data$"char_freq_$"))[data$"char_freq_$"]
 data$"char_freq_#" <-  as.double(levels(data$"char_freq_#"))[data$"char_freq_#"]
 data$capital_run_length_average <-  as.double(levels(data$capital_run_length_average))[data$capital_run_length_average]
 data$capital_run_length_longest <-  as.double(levels(data$capital_run_length_longest))[data$capital_run_length_longest]
+
+data$is_spam<-ifelse(data$is_spam == 1, TRUE,FALSE)
+
+dir <- "D:\\"
+pdfPath <- file.path(dir, "mojpdf.pdf")
+pdf(pdfPath)
+
+roc1 <- roc(data$is_spam, data$capital_run_length_average, percent=TRUE, plot=TRUE, col='blue', auc = )
+auc1 <- round(auc(roc1), 3)
+
+lines(roc1, col="red")
+legend("bottomright", 
+       legend=c(paste("AUC", auc1)), 
+       col=c("purple"), lwd=2);
+dev.off();
+
+roc(data$is_spam, data$capital_run_length_total, percent=TRUE, plot=TRUE, col='blue')
+roc(data$is_spam, data$capital_run_length_average, percent=TRUE, plot=TRUE, col='red')
+roc(data$is_spam, data$capital_run_length_longest, percent=TRUE, plot=TRUE, col='purple')
 
 set.seed(101) # Set Seed so that same sample can be reproduced in future also
 # Now Selecting 75% of data as sample from total 'n' rows of the data  
