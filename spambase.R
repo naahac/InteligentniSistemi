@@ -68,7 +68,7 @@ data$"char_freq_!" <-  as.double(levels(data$"char_freq_!"))[data$"char_freq_!"]
 data$"char_freq_$" <-  as.double(levels(data$"char_freq_$"))[data$"char_freq_$"]
 data$"char_freq_#" <-  as.double(levels(data$"char_freq_#"))[data$"char_freq_#"]
 data$capital_run_length_average <-  as.double(levels(data$capital_run_length_average))[data$capital_run_length_average]
-data$capital_run_length_longest <-  as.double(levels(data$capital_run_length_longest))[data$capital_run_length_longest]
+#data$capital_run_length_longest <-  as.double(levels(data$capital_run_length_longest))[data$capital_run_length_longest]
 
 data$is_spam<-ifelse(data$is_spam == 1, TRUE,FALSE)
 
@@ -76,7 +76,6 @@ dir <- "D:\\"
 pdfPath <- file.path(dir, "mojpdf.pdf")
 pdf(pdfPath)
 
-<<<<<<< HEAD
 hist(data$word_freq_make, main="Frequency of word make", xlab="word make", border="black", col="red", las=1)
 hist(data$word_freq_address, main="Frequency of word address", xlab="word address", border="black", col="red", las=1)
 hist(data$word_freq_all, main="Frequency of word all", xlab="word all", border="black", col="red", las=1)
@@ -94,12 +93,8 @@ hist(data$word_freq_report, main="Frequency of word report", xlab="word report",
 hist(data$word_freq_addresses, main="Frequency of word addresses", xlab="word addresses", border="black", col="red", las=1)
 hist(data$word_freq_free, main="Frequency of word free", xlab="word free", border="black", col="red", las=1)
 
-roc1 <- roc(data$is_spam, data$capital_run_length_average, percent=TRUE, plot=TRUE, col='blue', auc = )
-auc1 <- round(auc(roc1), 3)
-=======
 word_freq_make_roc <- roc(data$is_spam, data$word_freq_make, percent=TRUE, plot=TRUE)
 word_freq_make_auc <- round(auc(word_freq_make_roc), 3)
->>>>>>> fbd1522a17d5c7f7bac298556596b5d07cbb9ac2
 
 word_freq_address_roc <- roc(data$is_spam, data$word_freq_address, percent=TRUE, plot=TRUE)
 word_freq_address_auc <- round(auc(word_freq_address_roc), 3)
@@ -136,16 +131,16 @@ lines(word_freq_our_roc, col="black")
 lines(word_freq_over_roc, col="brown")
 lines(word_freq_remove_roc, col="orange")
 legend("bottomright", 
-       legend=c(paste("word_freq_make_auc", word_freq_make_auc),
-                paste("word_freq_address_auc", word_freq_address_auc),
-                paste("word_freq_all_auc", word_freq_all_auc),
-                paste("word_freq_3d_auc", word_freq_3d_auc),
-                paste("word_freq_our_auc", word_freq_our_auc),
-                paste("word_freq_over_auc", word_freq_over_auc),
-                paste("word_freq_remove_auc", word_freq_remove_auc),
-                paste("word_freq_internet_auc", word_freq_internet_auc),
-                paste("word_freq_order_auc", word_freq_order_auc),
-                paste("word_freq_mail_auc", word_freq_mail_auc)), 
+       legend=c(paste("make auc", word_freq_make_auc),
+                paste("address auc", word_freq_address_auc),
+                paste("all auc", word_freq_all_auc),
+                paste("3d auc", word_freq_3d_auc),
+                paste("our auc", word_freq_our_auc),
+                paste("over auc", word_freq_over_auc),
+                paste("remove auc", word_freq_remove_auc),
+                paste("internet auc", word_freq_internet_auc),
+                paste("order auc", word_freq_order_auc),
+                paste("mail auc", word_freq_mail_auc)), 
        col=c("purple", "blue", "red", "green", "black", "brown", "orange"), lwd=2);
 
 
@@ -161,17 +156,20 @@ train <- data[sample, ]
 test  <- data[-sample, ]
 
 #Prediction
-fit <- glm(is_spam~capital_run_length_average+capital_run_length_longest, data=train, family=binomial)
+fit <- glm(is_spam~., data=train, family=binomial)
 summary(fit)
 confint(fit)# 95% CI for the coefficients
 #exp(coef(fit))# exponentiated coefficients
 #exp(confint(fit)) # 95% CI for exponentiated coefficients
 
 res = predict(fit, test, type="response")
-#res[res < 0.5] <- 0
-#res[res >= 0.5] <- 1
+res[res < 0.5] <- 0
+res[res >= 0.5] <- 1
 
 hist(res, main="Predictions")
+
+misClasificError <- mean(res != test$is_spam)
+print(paste('Accuracy',1-misClasificError))
 
 
 
