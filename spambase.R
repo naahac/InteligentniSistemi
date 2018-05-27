@@ -13,6 +13,7 @@ colnames(data) <- c("word_freq_make", "word_freq_address", "word_freq_all", "wor
                     "word_freq_conference", "char_freq_;", "char_freq_(", "char_freq_[", "char_freq_!", "char_freq_$", "char_freq_#", "capital_run_length_average",
                     "capital_run_length_longest", "capital_run_length_total", "is_spam")
 
+<<<<<<< HEAD
 data$word_freq_make <-  as.double(levels(data$word_freq_make))[data$word_freq_make]
 data$word_freq_address <-  as.double(levels(data$word_freq_address))[data$word_freq_address]
 data$word_freq_all <-  as.double(levels(data$word_freq_all))[data$word_freq_all]
@@ -69,6 +70,15 @@ data$"char_freq_$" <-  as.double(levels(data$"char_freq_$"))[data$"char_freq_$"]
 data$"char_freq_#" <-  as.double(levels(data$"char_freq_#"))[data$"char_freq_#"]
 data$capital_run_length_average <-  as.double(levels(data$capital_run_length_average))[data$capital_run_length_average]
 #data$capital_run_length_longest <-  as.double(levels(data$capital_run_length_longest))[data$capital_run_length_longest]
+=======
+for(i in 1:55) {
+  data[[i]] <-  as.double(levels(data[[i]]))[data[[i]]]
+}
+
+data$word_binary_free <- ifelse(data$word_freq_free > 0, TRUE,FALSE)
+data$word_binary_receive <- ifelse(data$word_freq_receive > 0, TRUE,FALSE)
+data$word_binary_money <- ifelse(data$word_freq_money > 0, TRUE,FALSE)
+>>>>>>> 17d70946fa091615b90523456f17674a71cb9702
 
 data$is_spam<-ifelse(data$is_spam == 1, TRUE,FALSE)
 
@@ -76,6 +86,7 @@ dir <- "D:\\"
 pdfPath <- file.path(dir, "mojpdf.pdf")
 pdf(pdfPath)
 
+<<<<<<< HEAD
 hist(data$word_freq_make, main="Frequency of word make", xlab="word make", border="black", col="red", las=1)
 hist(data$word_freq_address, main="Frequency of word address", xlab="word address", border="black", col="red", las=1)
 hist(data$word_freq_all, main="Frequency of word all", xlab="word all", border="black", col="red", las=1)
@@ -93,6 +104,15 @@ hist(data$word_freq_report, main="Frequency of word report", xlab="word report",
 hist(data$word_freq_addresses, main="Frequency of word addresses", xlab="word addresses", border="black", col="red", las=1)
 hist(data$word_freq_free, main="Frequency of word free", xlab="word free", border="black", col="red", las=1)
 
+=======
+for(i in 1:54) {
+  hist(data[[i]], main=sprintf("Histogram of \"%s\"", colnames(data)[i]), xlab=colnames(data)[i], xlim=c(0,50), border="black", col="red", las=1)
+}
+
+roc1 <- roc(data$is_spam, data$capital_run_length_average, percent=TRUE, plot=TRUE, col='blue', auc = )
+auc1 <- round(auc(roc1), 3)
+
+>>>>>>> 17d70946fa091615b90523456f17674a71cb9702
 word_freq_make_roc <- roc(data$is_spam, data$word_freq_make, percent=TRUE, plot=TRUE)
 word_freq_make_auc <- round(auc(word_freq_make_roc), 3)
 
@@ -143,19 +163,25 @@ legend("bottomright",
                 paste("mail auc", word_freq_mail_auc)), 
        col=c("purple", "blue", "red", "green", "black", "brown", "orange"), lwd=2);
 
+xyplot(word_freq_free ~ word_freq_3d, data)
 
 dev.off();
 
 roc(data$is_spam, data$capital_run_length_total, percent=TRUE, plot=TRUE, col='blue')
 roc(data$is_spam, data$capital_run_length_average, percent=TRUE, plot=TRUE, col='red')
 
+set.seed(1000) # Set Seed so that same sample can be reproduced in future also
 # Now Selecting 75% of data as sample from total 'n' rows of the data  
 sample <- sample.int(n = nrow(data), size = floor(.75*nrow(data)), replace = F)
 train <- data[sample, ]
 test  <- data[-sample, ]
 
 #Prediction
+<<<<<<< HEAD
 fit <- glm(is_spam~., data=train, family=binomial)
+=======
+fit <- glm(is_spam ~ ., data=train, family=binomial)
+>>>>>>> 17d70946fa091615b90523456f17674a71cb9702
 summary(fit)
 confint(fit)# 95% CI for the coefficients
 #exp(coef(fit))# exponentiated coefficients
