@@ -93,7 +93,7 @@ roc(data$is_spam, data$capital_run_length_average, percent=TRUE, plot=TRUE, col=
 
 set.seed(1000) # Set Seed so that same sample can be reproduced in future also
 # Now Selecting 75% of data as sample from total 'n' rows of the data  
-sample <- sample.int(n = nrow(data), size = floor(.75*nrow(data)), replace = F)
+sample <- sample.int(n = nrow(data), size = floor(.70*nrow(data)), replace = F)
 train <- data[sample, ]
 test  <- data[-sample, ]
 
@@ -108,6 +108,9 @@ confint(fit)# 95% CI for the coefficients
 res = predict(fit, test, type="response")
 res[res < 0.5] <- 0
 res[res >= 0.5] <- 1
+
+res_roc <- roc(test$is_spam, res, percent=TRUE, plot=TRUE)
+coords(res_roc, "best", ret = "threshold")
 
 hist(res, main="Predictions")
 
