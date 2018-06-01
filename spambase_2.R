@@ -2,7 +2,6 @@ library(pROC)
 library(lattice)
 library(boot)
 library(rpart)
-require(tree)
 
 data <- read.csv2("https://archive.ics.uci.edu/ml/machine-learning-databases/spambase/spambase.data", header=FALSE, sep=",")
 
@@ -28,6 +27,16 @@ data$is_spam<-ifelse(data$is_spam == 1, TRUE,FALSE)
 
 set.seed(1234)
 
+for(i in 1:10) {
+  sample <- sample(nrow(data), size = nrow(data), replace = TRUE)
+  
+  data2 <- data[-sample, ]
+  
+  fit <- rpart(is_spam~., data=data2)
+  
+  data[[i]] <-  as.double(levels(data[[i]]))[data[[i]]]
+}
+
 rf2 <- function(data, indices) {
   d <- data[indices,] # allows boot to select sample 
   fit <- lm(is_spam~., data=d)
@@ -39,6 +48,9 @@ rf <- function(data, indices) {
   fit <- rpart(is_spam~., data=d)
   return(coef(fit)) 
 }
+
+fit <- rpart(is_spam~., data)
+fit
 
 results <- boot(data = data,statistic = rf2, R = 10)
 

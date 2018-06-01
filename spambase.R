@@ -86,8 +86,6 @@ legend("bottomright",
 
 xyplot(word_freq_free ~ word_freq_3d, data)
 
-dev.off();
-
 roc(data$is_spam, data$capital_run_length_total, percent=TRUE, plot=TRUE, col='blue')
 roc(data$is_spam, data$capital_run_length_average, percent=TRUE, plot=TRUE, col='red')
 
@@ -110,12 +108,17 @@ res[res < 0.5] <- 0
 res[res >= 0.5] <- 1
 
 res_roc <- roc(test$is_spam, res, percent=TRUE, plot=TRUE)
+res_auc <- round(auc(res_roc), 3)
 coords(res_roc, "best", ret = "threshold")
+
+dev.off();
 
 hist(res, main="Predictions")
 
 misClasificError <- mean(res != test$is_spam)
 print(paste('Accuracy',1-misClasificError))
+
+warnings()
 
 
 
