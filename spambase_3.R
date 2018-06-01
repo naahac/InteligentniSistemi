@@ -2,7 +2,9 @@ library(pROC)
 library(lattice)
 library(boot)
 library(rpart)
-require(tree)
+library(e1071)
+install.packages('neuralnet')
+library(neuralnet)
 
 data <- read.csv2("https://archive.ics.uci.edu/ml/machine-learning-databases/spambase/spambase.data", header=FALSE, sep=",")
 
@@ -26,14 +28,41 @@ data$word_binary_money <- ifelse(data$word_freq_money > 0, TRUE,FALSE)
 
 data$is_spam<-ifelse(data$is_spam == 1, TRUE,FALSE)
 
-set.seed(1234)
+set.seed(1000) # Set Seed so that same sample can be reproduced in future also
+# Now Selecting 75% of data as sample from total 'n' rows of the data  
+sample <- sample.int(n = nrow(data), size = floor(.75*nrow(data)), replace = F)
+train <- data[sample, ]
+test  <- data[-sample, ]
 
-rf <- function(data, indices) {
-  d <- data[indices,] # allows boot to select sample 
-  fit <- rpart(is_spam~., data=d)
-  return(coef(fit)) 
-}
+#SVM
+svm.model <- svm(is_spam~ ., data = train, type="C-classification")
+svm.pred <- predict(svm.model, train)
 
-results <- boot(data = data,statistic = rf, R = 10)
+train["svm"] <- svm.pred
+train$svm<-ifelse(train$svm == 1, TRUE,FALSE)
+misClasificError <- mean(svm.pred != train$is_spam)
+print(paste('Accuracy',1-misClasificError))
+table(pred = svm.pred, true = train$is_spam)
 
-print(results)
+#RPART
+rpart.model <- rpart(is_spam ~ ., data = train)
+rpart.pred <- predict(rpart.model, train, type = "vector")
+rpart.pred[rpart.pred < 0.5] <- 0
+rpart.pred[rpart.pred >= 0.5] <- 1
+train["rpart"] <- rpart.pred
+misClasificError <- mean(rpart.pred != train$is_spam)
+print(paste('Accuracy',1-misClasificError))
+
+table(pred = rpart.pred, true = train$is_spam)
+
+#GLM
+fit <- glm(is_spam ~ ., data=train, family=binomial)
+res = predict(fit, test, type="response")
+res[res < 0.5] <- 0
+res[res >= 0.5] <- 1
+
+hist(res, main="Predictions")
+
+misClasificError <- mean(res != test$is_spam)
+print(paste('Accuracy',1-misClasificError))
+
