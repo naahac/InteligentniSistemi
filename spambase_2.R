@@ -2,6 +2,8 @@ library(pROC)
 library(lattice)
 library(boot)
 library(rpart)
+library(xgboost)
+library(party)
 
 data <- read.csv2("https://archive.ics.uci.edu/ml/machine-learning-databases/spambase/spambase.data", header=FALSE, sep=",")
 
@@ -27,31 +29,51 @@ data$is_spam<-ifelse(data$is_spam == 1, TRUE,FALSE)
 
 set.seed(1234)
 
+dir <- "D:\\"
+pdfPath <- file.path(dir, "mojpdf2.pdf")
+pdf(pdfPath)
+
 for(i in 1:10) {
   sample <- sample(nrow(data), size = nrow(data), replace = TRUE)
+  sample <- unique(sample)
   
-  data2 <- data[-sample, ]
+  test <- data[-sample, ]
+  train <- data[sample, ]
   
-  fit <- rpart(is_spam~., data=data2)
   
-  data[[i]] <-  as.double(levels(data[[i]]))[data[[i]]]
+  
+  #odloèitveno drevo 1
+  fit <- rpart(is_spam~., method="class", data=train)
+  summary(fit)
+  
+  res <- predict(fit, test)
+  res[res < 0.5] <- 0
+  res[res >= 0.5] <- 1
+  
+  res[,1]<-ifelse(res[,2] < 0.5, FALSE,TRUE)
+  
+  
+  fit_roc <- roc(test$is_spam, res[,1])
+  fit_auc <- round(auc(fit_roc), 3)
+  fit_auc
+  
+  plot(fit_roc, col = "blue")
+  
+  printcp(fit) # display the results
+  plotcp(fit) # visualize cross-validation results
+  summary(fit) # detailed summary of splits
+  
+  # plot tree
+  plot(fit, uniform=TRUE, main="Classification Tree for words")
+  text(fit, use.n=TRUE, all=TRUE, cex=.8)
+  
+  #odloèitveno drevo 2
+  (ct = ctree(is_spam~., data = test))
+  plot(ct, main="Conditional Inference Tree", type="simple")
+  
+  boxplot(is_spam~.,data=test)
+  
+  bstSparse <- xgboost(data = train$word_freq_make, label = "test", max.depth = 2, eta = 1, nthread = 2, nround = 2, objective = "binary:logistic")
 }
 
-rf2 <- function(data, indices) {
-  d <- data[indices,] # allows boot to select sample 
-  fit <- lm(is_spam~., data=d)
-  return(coef(fit)) 
-}
-
-rf <- function(data, indices) {
-  d <- data[indices,] # allows boot to select sample 
-  fit <- rpart(is_spam~., data=d)
-  return(coef(fit)) 
-}
-
-fit <- rpart(is_spam~., data)
-fit
-
-results <- boot(data = data,statistic = rf2, R = 10)
-
-print(results)
+dev.off()
