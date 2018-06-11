@@ -120,8 +120,3 @@ hist(res.test, main="Predictions")
 res_roc <- roc(test$is_spam, res.test, percent=TRUE, plot=TRUE)
 
 print(paste('Accuracy',coords(res_roc, "best", ret = "accuracy")))
-
-warnings()
-
-
-

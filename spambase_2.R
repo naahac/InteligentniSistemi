@@ -99,24 +99,23 @@ for(i in 1:10) {
   test <- data[-sample, ]
   train <- data[sample, ]
   
-  #data$is_spam2 <- as.character(data$is_spam)
-  #data$is_spam2 <- as.factor(data$is_spam2)
-  
   ###################### RPART Decision tree #######################
   fit <- rpart(as.factor(is_spam)~., method="class", data=train)
-  summary(fit)
-
+  
   prune(fit, cp = fit$cptable[which.min(fit$cptable[,"xerror"]),"CP"])
   
+  res <- predict(fit, train)
+  res_roc <- roc(train$is_spam, res[,2])
+  threshold <- coords(res_roc, "best", ret = "threshold")
+
   res <- predict(fit, test)
-  res[res < 0.5] <- 0
-  res[res >= 0.5] <- 1
-  
+  res[res < threshold] <- 0
+  res[res >= threshold] <- 1
   res[,1]<-ifelse(res[,2] < 0.5, FALSE,TRUE)
   
   fit_roc <- roc(test$is_spam, res[,1])
   fit_auc <- round(auc(fit_roc), 3)
-  
+
   auc_rtree[i]<-fit_auc
   
   coords(fit_roc, "best", ret=c("threshold", "specificity", "sensitivity", "accuracy"))
@@ -129,11 +128,14 @@ for(i in 1:10) {
   ###################### CTREE Decision tree #######################
   fit_ctree = ctree(is_spam~., data = train)
   plot(fit_ctree, main="Conditional Inference Tree", type="simple")
-  summary(fit_ctree)
+
+  res <- predict(fit, train)
+  res_roc <- roc(train$is_spam, res[,2])
+  threshold <- coords(res_roc, "best", ret = "threshold")
 
   res_ctree <- predict(fit_ctree, test)
-  res_ctree[res_ctree < 0.5] <- 0
-  res_ctree[res_ctree >= 0.5] <- 1
+  res_ctree[res_ctree < threshold] <- 0
+  res_ctree[res_ctree >= threshold] <- 1
 
   fit_roc <- roc(test$is_spam, res_ctree[,1])
   fit_auc <- round(auc(fit_roc), 3)
