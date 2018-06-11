@@ -100,7 +100,6 @@ data = as.data.frame(scale(data, center = min, scale = max - min))
 set.seed(seed)
 
 for (i in 1:10) {
-  
   dir <- "D:\\"
   pdfPath <- file.path(dir, paste(paste("tretja_naloga_",i, sep = ""),".pdf", sep = ""))
   pdf(pdfPath)
@@ -110,6 +109,8 @@ for (i in 1:10) {
   test_orig <- data[-sample,]
   train <- data[sample,]
   test  <- data[-sample,]
+  
+  print("Start predicting")
   
   #################### PREDICT TRAIN ###################################
   #SVM
@@ -179,15 +180,15 @@ for (i in 1:10) {
   ###################### ADD COLUMNS TO TEST #######################
   test["svm"] <- svm.pred
   test$svm <- ifelse(test$svm == 1, TRUE, FALSE)
-  misClasificError <- mean(test$svm != test$is_spam)
+  #misClasificError <- mean(test$svm != test$is_spam)
   #print(paste('Accuracy SVM test', 1 - misClasificError))
   
   test["neural"] <- neural.test.res
-  misClasificError <- mean(test$neural != test$is_spam)
-  print(paste('Accuracy NEURAL test', 1 - misClasificError))
+  #misClasificError <- mean(test$neural != test$is_spam)
+  #print(paste('Accuracy NEURAL test', 1 - misClasificError))
   
   test["rpart"] <- rpart.pred
-  misClasificError <- mean(test$rpart != test$is_spam)
+  #misClasificError <- mean(test$rpart != test$is_spam)
   #print(paste('Accuracy RPART test', 1 - misClasificError))
   
   #####################   GLM FINAL PREDICT ##################
@@ -215,6 +216,11 @@ for (i in 1:10) {
                  plot = TRUE)
   test_auc <- round(auc(test_roc), 3)
   print(paste("GLM AUC", test_auc))
+  
+  conf_matrix<-table(glm.test.predict,test$is_spam)
+  conf_matrix
+  print(specificity(conf_matrix))
+  print(sensitivity(conf_matrix))
   # results.accuracy <- append(results.accuracy, misClasificError)
   
   ########################### NEURAL FINAL PREDICT ####################
@@ -250,12 +256,12 @@ for (i in 1:10) {
   
   #######################   BOOSTING #######################
   
-  boost=gbm(is_spam ~ . ,data = train_orig,distribution = "gaussian",n.trees = 10000,
+  boost=gbm(is_spam ~ . ,data = train_orig,distribution = "gaussian",n.trees = 1000,
                    shrinkage = 0.01, interaction.depth = 4)
   
   summary(boost)
   
-  n.trees = seq(from=100 ,to=10000, by=100) #no of trees-a vector of 100 values 
+  n.trees = seq(from=100 ,to=1000, by=100) #no of trees-a vector of 100 values 
   
   #Generating a Prediction matrix for each Tree
   predmatrix<-predict(boost,test_orig,n.trees = n.trees)
@@ -324,6 +330,5 @@ for (i in 1:10) {
     
   misClasificError <- mean(xgb.pred.test != as.factor(test_orig$is_spam))
   print(paste('Accuracy XGBOOST test', 1 - misClasificError))
-
   dev.off()
 }
