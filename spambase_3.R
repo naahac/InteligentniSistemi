@@ -284,7 +284,6 @@ for (i in 1:10) {
 
   
   # Load Library or packages
-  library(e1071)
   library(caret)
   # Create Confusion Matrix
   confusionMatrix(data=factor(bagging.predict),

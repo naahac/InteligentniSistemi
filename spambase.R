@@ -117,9 +117,9 @@ res.test[res.test < threshold] <- 0
 res.test[res.test >= threshold] <- 1
 
 hist(res.test, main="Predictions")
+res_roc <- roc(test$is_spam, res.test, percent=TRUE, plot=TRUE)
 
-misClasificError <- mean(res.test != test$is_spam)
-print(paste('Accuracy',1-misClasificError))
+print(paste('Accuracy',coords(res_roc, "best", ret = "accuracy")))
 
 warnings()
 
