@@ -5,6 +5,11 @@ library(rpart)
 library(e1071)
 #install.packages('neuralnet')
 library(neuralnet)
+require(gbm)
+#install.packages("ipred")
+library(ipred)
+
+seed <- 1000
 
 data <-
   read.csv2(
@@ -92,13 +97,16 @@ max = apply(data , 2 , max)
 min = apply(data, 2 , min)
 data = as.data.frame(scale(data, center = min, scale = max - min))
 
-set.seed(1000) # Set Seed so that same sample can be reproduced in future also
-# Now Selecting 75% of data as sample from total 'n' rows of the data
-for (i in 1:3) {
+set.seed(seed)
+
+for (i in 1:1) {
   sample <- sample(nrow(data), size = nrow(data), replace = TRUE)
+  train_orig <- data[sample,]
+  test_orig <- data[-sample,]
   train <- data[sample,]
   test  <- data[-sample,]
   
+  #################### PREDICT TRAIN ###################################
   #SVM
   svm.model <- svm(is_spam ~ ., data = train, type = "C-classification")
   svm.pred <- predict(svm.model, train)
@@ -123,56 +131,47 @@ for (i in 1:3) {
   neural.res <- neural.pred[["net.result"]]
   
   
-  # add columns and set thresholds for RPART NN and SVM to train
+  ########################## ADD COLUMNS TO TRAIN #####################
   res_roc <- roc(train$is_spam,
                  rpart.pred,
                  percent = TRUE,
                  plot = TRUE)
   rpart.threshold <- coords(res_roc, "best", ret = "threshold")
-  rpart.pred[rpart.pred < rpart.threshold] <- 0
-  rpart.pred[rpart.pred >= rpart.threshold] <- 1
+  #rpart.pred[rpart.pred < rpart.threshold] <- 0
+  #rpart.pred[rpart.pred >= rpart.threshold] <- 1
   train["rpart"] <- rpart.pred
   
   
   res_roc <- roc(train$is_spam,
-                 neural.res,
+                 neural.res[,1],
                  percent = TRUE,
                  plot = TRUE)
   neural.threshold <- coords(res_roc, "best", ret = "threshold")
-  neural.res[neural.res < neural.threshold] <- 0
-  neural.res[neural.res >= neural.threshold] <- 1
+  #neural.res[neural.res < neural.threshold] <- 0
+  #neural.res[neural.res >= neural.threshold] <- 1
   train["neural"] <- neural.res
   
   train["svm"] <- svm.pred
   train$svm <- ifelse(train$svm == 1, TRUE, FALSE)
   
-  #GLM TRAIN
-  glm.model <- glm(is_spam ~ ., data = train, family = binomial)
-  glm.predict = predict(glm.model, train, type = "response")
-  res_roc <- roc(train$is_spam,
-                 glm.predict,
-                 percent = TRUE,
-                 plot = TRUE)
-
-  glm.threshold <- coords(res_roc, "best", ret = "threshold")
   
-  ########################## TEST ############################
+  ########################## PREDICT TEST ############################
   #SVM TEST
   svm.pred <- predict(svm.model, test)
   
   #RPART TEST
   rpart.pred <- predict(rpart.model, test, type = "vector")
-  rpart.pred[rpart.pred < rpart.threshold] <- 0
-  rpart.pred[rpart.pred >= rpart.threshold] <- 1
+  #rpart.pred[rpart.pred < rpart.threshold] <- 0
+  #rpart.pred[rpart.pred >= rpart.threshold] <- 1
   
   #neural TEST
   neural.test.pred = compute(neural.model, test[, c(0:60)])
   neural.test.res <- neural.test.pred[["net.result"]]
-  neural.test.res[neural.test.res < neural.threshold] <- 0
-  neural.test.res[neural.test.res >= neural.threshold] <- 1
+  #neural.test.res[neural.test.res < neural.threshold] <- 0
+  #neural.test.res[neural.test.res >= neural.threshold] <- 1
   
   
-  #add columns to test
+  ###################### ADD COLUMNS TO TEST #######################
   test["svm"] <- svm.pred
   test$svm <- ifelse(test$svm == 1, TRUE, FALSE)
   misClasificError <- mean(test$svm != test$is_spam)
@@ -186,10 +185,22 @@ for (i in 1:3) {
   misClasificError <- mean(test$rpart != test$is_spam)
   print(paste('Accuracy RPART test', 1 - misClasificError))
   
-  #GLM final predict
+  #####################   GLM FINAL PREDICT ##################
+  
+  #GLM TRAIN
+  glm.model <- glm(is_spam ~ ., data = train, family = binomial)
+  glm.predict = predict(glm.model, train, type = "response")
+  res_roc <- roc(train$is_spam,
+                 glm.predict,
+                 percent = TRUE,
+                 plot = TRUE)
+  
+  glm.threshold <- coords(res_roc, "best", ret = "threshold")
+  
   glm.test.predict = predict(glm.model, test, type = "response")
   glm.test.predict[glm.test.predict < glm.threshold] <- 0
   glm.test.predict[glm.test.predict >= glm.threshold] <- 1
+  
   
   misClasificError <- mean(glm.test.predict != test$is_spam)
   print(paste('Accuracy GLM final', 1 - misClasificError))
@@ -200,4 +211,81 @@ for (i in 1:3) {
   test_auc <- round(auc(test_roc), 3)
   print(paste("GLM AUC", test_auc))
   # results.accuracy <- append(results.accuracy, misClasificError)
+  
+  ########################### NEURAL FINAL PREDICT ####################
+  
+  #######################   BOOSTING #######################
+  
+  boost=gbm(is_spam ~ . ,data = train_orig,distribution = "gaussian",n.trees = 10000,
+                   shrinkage = 0.01, interaction.depth = 4)
+  
+  summary(boost)
+  
+  n.trees = seq(from=100 ,to=10000, by=100) #no of trees-a vector of 100 values 
+  
+  #Generating a Prediction matrix for each Tree
+  predmatrix<-predict(boost,test_orig,n.trees = n.trees)
+  dim(predmatrix) #dimentions of the Prediction Matrix
+  
+  #Calculating The Mean squared Test Error
+  test.error<-with(test_orig,apply( (predmatrix-is_spam)^2,2,mean))
+  head(test.error) #contains the Mean squared test error for each of the 100 trees averaged
+  
+  
+  #Plotting the test error vs number of trees
+  
+  plot(n.trees , test.error , pch=19,col="blue",xlab="Number of Trees",ylab="Test Error", main = "Perfomance of Boosting on Test Set")
+
+  
+  ########################   BAGGING ##################
+  
+  bagging <- bagging(as.factor(is_spam) ~ ., data = train_orig, mfinal=15, coob = TRUE) #control(rpart.control(maxdepth = 5, minsplit = 15))
+  bagging.predict <- predict(bagging,test_orig)
+
+  
+  # Load Library or packages
+  library(e1071)
+  library(caret)
+  # Create Confusion Matrix
+  confusionMatrix(data=factor(bagging.predict),
+                  reference=factor(test$is_spam),
+                  positive='1')
+  
+  ######################### RANDOM FOREST #####################
+  
+  #install.packages('randomForest')
+  library(randomForest)
+  
+  randomForest.fit <- randomForest(as.factor(is_spam) ~ .,
+                                          data=train_orig, 
+                                          importance=TRUE, 
+                                          ntree=2000)
+  randomForest.pred <- predict(randomForest.fit, test_orig)
+  
+  misClasificError <- mean(randomForest.pred != as.factor(test_orig$is_spam))
+  print(paste('Accuracy RANDOM FOREST test', 1 - misClasificError))
+  
+  ########################### XGBoost ###########################
+  
+#  install.packages("xgboost")
+  require(xgboost)
+  xgb.fit <- xgboost(data = as.matrix(train_orig), label = train_orig$is_spam, max.depth = 6, eta = 1, nthread = 2, nround = 10, objective = "binary:logistic")
+  xgb.pred <- predict(xgb.fit, as.matrix(train_orig))
+  
+  res_roc <- roc(train_orig$is_spam,
+                 xgb.pred,
+                 percent = TRUE,
+                 plot = TRUE)
+  
+  xgb.threshold <- coords(res_roc, "best", ret = "threshold")
+
+  xgb.pred.test <- predict(xgb.fit, as.matrix(test_orig))
+  
+  xgb.pred.test = predict(glm.model, test, type = "response")
+  xgb.pred.test[xgb.pred.test < xgb.threshold] <- 0
+  xgb.pred.test[xgb.pred.test >= xgb.threshold] <- 1
+    
+  misClasificError <- mean(xgb.pred != as.factor(test_orig$is_spam))
+  print(paste('Accuracy XGBOOST test', 1 - misClasificError))
+
 }
