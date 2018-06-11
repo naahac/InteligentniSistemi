@@ -98,24 +98,27 @@ test  <- data[-sample, ]
 #Prediction
 fit <- glm(is_spam ~ ., data=train, family=binomial)
 
-summary(fit)
-confint(fit)# 95% CI for the coefficients
+#summary(fit)
+#confint(fit)# 95% CI for the coefficients
 #exp(coef(fit))# exponentiated coefficients
 #exp(confint(fit)) # 95% CI for exponentiated coefficients
 
-res = predict(fit, test, type="response")
-res[res < 0.5] <- 0
-res[res >= 0.5] <- 1
+res <- predict(fit, train, type="response")
 
-res_roc <- roc(test$is_spam, res, percent=TRUE, plot=TRUE)
+res_roc <- roc(train$is_spam, res, percent=TRUE, plot=TRUE)
 res_auc <- round(auc(res_roc), 3)
-coords(res_roc, "best", ret = "threshold")
+threshold <- coords(res_roc, "best", ret = "threshold")
 
 dev.off();
 
-hist(res, main="Predictions")
+res.test <- predict(fit, test, type="response")
 
-misClasificError <- mean(res != test$is_spam)
+res.test[res.test < threshold] <- 0
+res.test[res.test >= threshold] <- 1
+
+hist(res.test, main="Predictions")
+
+misClasificError <- mean(res.test != test$is_spam)
 print(paste('Accuracy',1-misClasificError))
 
 warnings()

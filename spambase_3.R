@@ -99,7 +99,12 @@ data = as.data.frame(scale(data, center = min, scale = max - min))
 
 set.seed(seed)
 
-for (i in 1:1) {
+for (i in 1:10) {
+  
+  dir <- "D:\\"
+  pdfPath <- file.path(dir, paste(paste("tretja_naloga_",i, sep = ""),".pdf", sep = ""))
+  pdf(pdfPath)
+  
   sample <- sample(nrow(data), size = nrow(data), replace = TRUE)
   train_orig <- data[sample,]
   test_orig <- data[-sample,]
@@ -114,6 +119,13 @@ for (i in 1:1) {
   #RPART
   rpart.model <- rpart(is_spam ~ ., data = train)
   rpart.pred <- predict(rpart.model, train, type = "vector")
+  res_roc <- roc(train$is_spam,
+                 rpart.pred,
+                 percent = TRUE,
+                 plot = TRUE)
+  rpart.threshold <- coords(res_roc, "best", ret = "threshold")
+  rpart.pred[rpart.pred < rpart.threshold] <- 0
+  rpart.pred[rpart.pred >= rpart.threshold] <- 1
   
   #NN
   n <- names(data)
@@ -123,25 +135,12 @@ for (i in 1:1) {
     neuralnet(
       formula,
       data = train,
-      hidden = c(3, 2, 1) ,
+      hidden = c(3,2,1),
       linear.output = T
     )
   # plot(neural.model)
-  neural.pred = compute(neural.model, train[, c(0:60)])
+  neural.pred = compute(neural.model, subset(train, select=-c(is_spam)))
   neural.res <- neural.pred[["net.result"]]
-  
-  
-  ########################## ADD COLUMNS TO TRAIN #####################
-  res_roc <- roc(train$is_spam,
-                 rpart.pred,
-                 percent = TRUE,
-                 plot = TRUE)
-  rpart.threshold <- coords(res_roc, "best", ret = "threshold")
-  #rpart.pred[rpart.pred < rpart.threshold] <- 0
-  #rpart.pred[rpart.pred >= rpart.threshold] <- 1
-  train["rpart"] <- rpart.pred
-  
-  
   res_roc <- roc(train$is_spam,
                  neural.res[,1],
                  percent = TRUE,
@@ -149,6 +148,12 @@ for (i in 1:1) {
   neural.threshold <- coords(res_roc, "best", ret = "threshold")
   #neural.res[neural.res < neural.threshold] <- 0
   #neural.res[neural.res >= neural.threshold] <- 1
+  
+  
+  ########################## ADD COLUMNS TO TRAIN #####################
+
+  train["rpart"] <- rpart.pred
+  
   train["neural"] <- neural.res
   
   train["svm"] <- svm.pred
@@ -165,7 +170,7 @@ for (i in 1:1) {
   #rpart.pred[rpart.pred >= rpart.threshold] <- 1
   
   #neural TEST
-  neural.test.pred = compute(neural.model, test[, c(0:60)])
+  neural.test.pred = compute(neural.model, subset(test, select=-c(is_spam)))
   neural.test.res <- neural.test.pred[["net.result"]]
   #neural.test.res[neural.test.res < neural.threshold] <- 0
   #neural.test.res[neural.test.res >= neural.threshold] <- 1
@@ -175,7 +180,7 @@ for (i in 1:1) {
   test["svm"] <- svm.pred
   test$svm <- ifelse(test$svm == 1, TRUE, FALSE)
   misClasificError <- mean(test$svm != test$is_spam)
-  print(paste('Accuracy SVM test', 1 - misClasificError))
+  #print(paste('Accuracy SVM test', 1 - misClasificError))
   
   test["neural"] <- neural.test.res
   misClasificError <- mean(test$neural != test$is_spam)
@@ -183,7 +188,7 @@ for (i in 1:1) {
   
   test["rpart"] <- rpart.pred
   misClasificError <- mean(test$rpart != test$is_spam)
-  print(paste('Accuracy RPART test', 1 - misClasificError))
+  #print(paste('Accuracy RPART test', 1 - misClasificError))
   
   #####################   GLM FINAL PREDICT ##################
   
@@ -213,6 +218,35 @@ for (i in 1:1) {
   # results.accuracy <- append(results.accuracy, misClasificError)
   
   ########################### NEURAL FINAL PREDICT ####################
+  # 
+  # n <- names(data)
+  # s <- paste(n[!n %in% "is_spam"], collapse = " + ")
+  # formula <- as.formula(paste("is_spam ~", s))
+  # neural.model <-
+  #   neuralnet(
+  #     formula,
+  #     data = train,
+  #     hidden = c(3,2) ,
+  #     linear.output = T
+  #   )
+  # # plot(neural.model)
+  # neural.pred = compute(neural.model, subset(train, select=-c(is_spam)))
+  # neural.res <- neural.pred[["net.result"]]
+  # 
+  # res_roc <- roc(test$is_spam,
+  #                neural.res[,1],
+  #                percent = TRUE,
+  #                plot = TRUE)
+  # neural.threshold <- coords(res_roc, "best", ret = "threshold")
+  # 
+  # neural.test.pred = compute(neural.model, subset(test, select=-c(is_spam)))
+  # 
+  # neural.test.res <- neural.test.pred[["net.result"]]
+  # neural.test.res[neural.test.res < neural.threshold] <- 0
+  # neural.test.res[neural.test.res >= neural.threshold] <- 1
+  # 
+  # misClasificError <- mean(neural.test.res != test$is_spam)
+  # print(paste('Accuracy NEURAL TEST', 1 - misClasificError))
   
   #######################   BOOSTING #######################
   
@@ -269,8 +303,12 @@ for (i in 1:1) {
   
 #  install.packages("xgboost")
   require(xgboost)
-  xgb.fit <- xgboost(data = as.matrix(train_orig), label = train_orig$is_spam, max.depth = 6, eta = 1, nthread = 2, nround = 10, objective = "binary:logistic")
-  xgb.pred <- predict(xgb.fit, as.matrix(train_orig))
+  
+  train_xgb <- subset(train_orig , select=-c(is_spam))
+  test_xgb <- subset(test_orig , select=-c(is_spam))
+  
+  xgb.fit <- xgboost(data = as.matrix(train_xgb), label = train_orig$is_spam, max.depth = 6, eta = 1, nthread = 2, nround = 10, objective = "binary:logistic")
+  xgb.pred <- predict(xgb.fit, as.matrix(train_xgb))
   
   res_roc <- roc(train_orig$is_spam,
                  xgb.pred,
@@ -279,13 +317,13 @@ for (i in 1:1) {
   
   xgb.threshold <- coords(res_roc, "best", ret = "threshold")
 
-  xgb.pred.test <- predict(xgb.fit, as.matrix(test_orig))
-  
-  xgb.pred.test = predict(glm.model, test, type = "response")
+
+  xgb.pred.test <- predict(xgb.fit, as.matrix(test_xgb))
   xgb.pred.test[xgb.pred.test < xgb.threshold] <- 0
   xgb.pred.test[xgb.pred.test >= xgb.threshold] <- 1
     
-  misClasificError <- mean(xgb.pred != as.factor(test_orig$is_spam))
+  misClasificError <- mean(xgb.pred.test != as.factor(test_orig$is_spam))
   print(paste('Accuracy XGBOOST test', 1 - misClasificError))
 
+  dev.off()
 }
