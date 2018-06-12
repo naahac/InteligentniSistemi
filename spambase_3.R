@@ -18,8 +18,7 @@ data <-
     sep = ","
   )
 
-colnames(data) <-
-  c(
+  cols <- c(
     "word_freq_make",
     "word_freq_address",
     "word_freq_all",
@@ -79,10 +78,13 @@ colnames(data) <-
     "capital_run_length_total",
     "is_spam"
   )
-
-for (i in 1:55) {
-  data[[i]] <-  as.double(levels(data[[i]]))[data[[i]]]
-}
+  
+  
+  colnames(data) <- cols
+  
+  for(i in 1:55) {
+    data[[i]] <-  as.double(levels(data[[i]]))[data[[i]]]
+  }
 
 data$word_binary_free <- ifelse(data$word_freq_free > 0, TRUE, FALSE)
 data$word_binary_receive <-
@@ -92,10 +94,11 @@ data$word_binary_money <-
 
 data$is_spam <- ifelse(data$is_spam == 1, TRUE, FALSE)
 
-#NORAMLIZATION
 max = apply(data , 2 , max)
 min = apply(data, 2 , min)
 data = as.data.frame(scale(data, center = min, scale = max - min))
+
+data <- na.omit(data)#remove rows with NA
 
 set.seed(seed)
 
@@ -137,6 +140,7 @@ for (i in 1:10) {
       formula,
       data = train,
       hidden = c(3,2,1),
+      threshold = 0.5,
       linear.output = T
     )
   # plot(neural.model)
@@ -221,6 +225,7 @@ for (i in 1:10) {
   conf_matrix
   print(specificity(conf_matrix))
   print(sensitivity(conf_matrix))
+  
   # results.accuracy <- append(results.accuracy, misClasificError)
   
   ########################### NEURAL FINAL PREDICT ####################
@@ -255,78 +260,78 @@ for (i in 1:10) {
   # print(paste('Accuracy NEURAL TEST', 1 - misClasificError))
   
   #######################   BOOSTING #######################
-  
+
   boost=gbm(is_spam ~ . ,data = train_orig,distribution = "gaussian",n.trees = 1000,
                    shrinkage = 0.01, interaction.depth = 4)
-  
+
   summary(boost)
-  
-  n.trees = seq(from=100 ,to=1000, by=100) #no of trees-a vector of 100 values 
-  
+
+  n.trees = seq(from=100 ,to=1000, by=100) #no of trees-a vector of 100 values
+
   #Generating a Prediction matrix for each Tree
   predmatrix<-predict(boost,test_orig,n.trees = n.trees)
   dim(predmatrix) #dimentions of the Prediction Matrix
-  
+
   #Calculating The Mean squared Test Error
   test.error<-with(test_orig,apply( (predmatrix-is_spam)^2,2,mean))
   head(test.error) #contains the Mean squared test error for each of the 100 trees averaged
-  
-  
+
+
   #Plotting the test error vs number of trees
-  
+
   plot(n.trees , test.error , pch=19,col="blue",xlab="Number of Trees",ylab="Test Error", main = "Perfomance of Boosting on Test Set")
 
-  
+
   ########################   BAGGING ##################
-  
+
   bagging <- bagging(as.factor(is_spam) ~ ., data = train_orig, mfinal=15, coob = TRUE) #control(rpart.control(maxdepth = 5, minsplit = 15))
   bagging.predict <- predict(bagging,test_orig)
 
-  
+
   # Load Library or packages
   library(caret)
   # Create Confusion Matrix
   confusionMatrix(data=factor(bagging.predict),
                   reference=factor(test$is_spam),
                   positive='1')
-  
+
   ######################### RANDOM FOREST #####################
-  
+
   #install.packages('randomForest')
   library(randomForest)
-  
+
   randomForest.fit <- randomForest(as.factor(is_spam) ~ .,
-                                          data=train_orig, 
-                                          importance=TRUE, 
-                                          ntree=2000)
+                                          data=train_orig,
+                                          importance=TRUE,
+                                          ntree=1000)
   randomForest.pred <- predict(randomForest.fit, test_orig)
-  
+
   misClasificError <- mean(randomForest.pred != as.factor(test_orig$is_spam))
   print(paste('Accuracy RANDOM FOREST test', 1 - misClasificError))
-  
+
   ########################### XGBoost ###########################
-  
+
 #  install.packages("xgboost")
   require(xgboost)
-  
+
   train_xgb <- subset(train_orig , select=-c(is_spam))
   test_xgb <- subset(test_orig , select=-c(is_spam))
-  
+
   xgb.fit <- xgboost(data = as.matrix(train_xgb), label = train_orig$is_spam, max.depth = 6, eta = 1, nthread = 2, nround = 10, objective = "binary:logistic")
   xgb.pred <- predict(xgb.fit, as.matrix(train_xgb))
-  
+
   res_roc <- roc(train_orig$is_spam,
                  xgb.pred,
                  percent = TRUE,
                  plot = TRUE)
-  
+
   xgb.threshold <- coords(res_roc, "best", ret = "threshold")
 
 
   xgb.pred.test <- predict(xgb.fit, as.matrix(test_xgb))
   xgb.pred.test[xgb.pred.test < xgb.threshold] <- 0
   xgb.pred.test[xgb.pred.test >= xgb.threshold] <- 1
-    
+
   misClasificError <- mean(xgb.pred.test != as.factor(test_orig$is_spam))
   print(paste('Accuracy XGBOOST test', 1 - misClasificError))
   dev.off()
