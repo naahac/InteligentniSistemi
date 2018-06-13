@@ -160,7 +160,7 @@ for(i in 1:10) {
   train_xgb <- subset(train , select=-c(is_spam))
   test_xgb <- subset(test , select=-c(is_spam))
   
-  xgb.fit <- xgboost(data = as.matrix(train_xgb), label = train$is_spam, max.depth = 6, eta = 1, nthread = 2, nround = 10, objective = "binary:logistic")
+  xgb.fit <- xgboost(data = as.matrix(train_xgb), label = train$is_spam, max.depth = 6, eta = 1, nround = 10, objective = "binary:logistic")
   xgb.pred <- predict(xgb.fit, as.matrix(train_xgb))
   
   fit_roc <- roc(train$is_spam, xgb.pred)
@@ -168,7 +168,7 @@ for(i in 1:10) {
   auc_xgboost[i]<-fit_auc
   
   coords(fit_roc, "best", ret=c("threshold", "specificity", "sensitivity", "accuracy"))
-  }
+}
 
 df = data.frame(auc_rtree, auc_ctree, auc_randomforest, auc_xgboost)
 boxplot(df)

@@ -102,6 +102,12 @@ data <- na.omit(data)#remove rows with NA
 
 set.seed(seed)
 
+auc_supermethod <- c()
+auc_supermethod2 <- c()
+auc_bagging <- c()
+auc_randomforest <- c()
+auc_xgboost <- c()
+
 for (i in 1:10) {
   dir <- "D:\\"
   pdfPath <- file.path(dir, paste(paste("tretja_naloga_",i, sep = ""),".pdf", sep = ""))
@@ -113,7 +119,7 @@ for (i in 1:10) {
   train <- data[sample,]
   test  <- data[-sample,]
   
-  print("Start predicting")
+  print(paste('Start predicting', i))
   
   #################### PREDICT TRAIN ###################################
   #SVM
@@ -141,7 +147,7 @@ for (i in 1:10) {
       data = train,
       hidden = c(3,2,1),
       threshold = 0.5,
-      linear.output = T
+      linear.output = F
     )
   # plot(neural.model)
   neural.pred = compute(neural.model, subset(train, select=-c(is_spam)))
@@ -169,14 +175,23 @@ for (i in 1:10) {
   #SVM TEST
   svm.pred <- predict(svm.model, test)
   
+  #svm.roc <- roc(test$is_spam, svm.pred)
+  # auc_svm[i] <- round(auc(svm.roc), 3)
+  
   #RPART TEST
   rpart.pred <- predict(rpart.model, test, type = "vector")
+  
+  # rpart.roc <- roc(test$is_spam, rpart.pred)
+  # auc_rpart[i] <- round(auc(rpart.roc), 3)
+  
   #rpart.pred[rpart.pred < rpart.threshold] <- 0
   #rpart.pred[rpart.pred >= rpart.threshold] <- 1
   
   #neural TEST
   neural.test.pred = compute(neural.model, subset(test, select=-c(is_spam)))
   neural.test.res <- neural.test.pred[["net.result"]]
+  
+  #neural.roc <- roc(test$is_spam, neural.test.res)
   #neural.test.res[neural.test.res < neural.threshold] <- 0
   #neural.test.res[neural.test.res >= neural.threshold] <- 1
   
@@ -214,12 +229,11 @@ for (i in 1:10) {
   
   misClasificError <- mean(glm.test.predict != test$is_spam)
   print(paste('Accuracy GLM final', 1 - misClasificError))
-  test_roc <- roc(test$is_spam,
-                 glm.test.predict,
-                 percent = TRUE,
-                 plot = TRUE)
+  test_roc <- roc(test$is_spam, glm.test.predict)
   test_auc <- round(auc(test_roc), 3)
   print(paste("GLM AUC", test_auc))
+  
+  auc_supermethod[i]<-test_auc
   
   conf_matrix<-table(glm.test.predict,test$is_spam)
   conf_matrix
@@ -229,7 +243,7 @@ for (i in 1:10) {
   # results.accuracy <- append(results.accuracy, misClasificError)
   
   ########################### NEURAL FINAL PREDICT ####################
-  # 
+
   # n <- names(data)
   # s <- paste(n[!n %in% "is_spam"], collapse = " + ")
   # formula <- as.formula(paste("is_spam ~", s))
@@ -238,9 +252,21 @@ for (i in 1:10) {
   #     formula,
   #     data = train,
   #     hidden = c(3,2) ,
-  #     linear.output = T
+  #     linear.output = F
   #   )
-  # # plot(neural.model)
+  # 
+  # neural.pred = compute(neural.model, subset(test, select=-c(is_spam)))
+  # neural.res <- neural.pred[["net.result"]]
+  # res_roc <- roc(test$is_spam,
+  #                neural.res[,1],
+  #                percent = TRUE,
+  #                plot = TRUE)
+
+  #neural.threshold <- coords(res_roc, "best", ret = "threshold")
+  # fit_auc <- round(auc(res_roc), 3)
+  # auc_supermethod2[i]<-fit_auc
+  # 
+  # plot(neural.model)
   # neural.pred = compute(neural.model, subset(train, select=-c(is_spam)))
   # neural.res <- neural.pred[["net.result"]]
   # 
@@ -256,9 +282,12 @@ for (i in 1:10) {
   # neural.test.res[neural.test.res < neural.threshold] <- 0
   # neural.test.res[neural.test.res >= neural.threshold] <- 1
   # 
+  # res_roc <- roc(test_orig$is_spam, neural.test.res)
+  # fit_auc <- round(auc(res_roc), 3)
+  # auc_supermethod2[i]<-fit_auc
+  # 
   # misClasificError <- mean(neural.test.res != test$is_spam)
   # print(paste('Accuracy NEURAL TEST', 1 - misClasificError))
-  
   #######################   BOOSTING #######################
 
   boost=gbm(is_spam ~ . ,data = train_orig,distribution = "gaussian",n.trees = 1000,
@@ -287,6 +316,14 @@ for (i in 1:10) {
   bagging <- bagging(as.factor(is_spam) ~ ., data = train_orig, mfinal=15, coob = TRUE) #control(rpart.control(maxdepth = 5, minsplit = 15))
   bagging.predict <- predict(bagging,test_orig)
 
+  levels(bagging.predict) <- c(FALSE,TRUE)
+  bagging.predict <- as.logical(bagging.predict)
+  bagging.predict <- as.integer(bagging.predict)
+  bg = data.frame(bagging.predict)
+  
+  res_roc <- roc(test_orig$is_spam, bagging.predict)
+  fit_auc <- round(auc(res_roc), 3)
+  auc_bagging[i]<-fit_auc
 
   # Load Library or packages
   library(caret)
@@ -304,14 +341,20 @@ for (i in 1:10) {
                                           data=train_orig,
                                           importance=TRUE,
                                           ntree=1000)
+  
   randomForest.pred <- predict(randomForest.fit, test_orig)
+  randomForest.pred<-as.integer(as.logical(randomForest.pred))
+  
+  # res_roc <- roc(test_orig$is_spam, randomForest.pred)
+  # fit_auc <- round(auc(res_roc), 3)
+  # auc_randomforest[i]<-fit_auc
 
   misClasificError <- mean(randomForest.pred != as.factor(test_orig$is_spam))
   print(paste('Accuracy RANDOM FOREST test', 1 - misClasificError))
 
   ########################### XGBoost ###########################
 
-#  install.packages("xgboost")
+  #install.packages("xgboost")
   require(xgboost)
 
   train_xgb <- subset(train_orig , select=-c(is_spam))
@@ -327,12 +370,25 @@ for (i in 1:10) {
 
   xgb.threshold <- coords(res_roc, "best", ret = "threshold")
 
-
   xgb.pred.test <- predict(xgb.fit, as.matrix(test_xgb))
   xgb.pred.test[xgb.pred.test < xgb.threshold] <- 0
   xgb.pred.test[xgb.pred.test >= xgb.threshold] <- 1
-
+  
+  res_roc <- roc(test_orig$is_spam, xgb.pred.test)
+  fit_auc <- round(auc(res_roc), 3)
+  auc_xgboost[i]<-fit_auc
   misClasificError <- mean(xgb.pred.test != as.factor(test_orig$is_spam))
   print(paste('Accuracy XGBOOST test', 1 - misClasificError))
+  
   dev.off()
 }
+
+dir <- "D:\\"
+pdfPath <- file.path(dir, "mojpdf3.pdf")
+pdf(pdfPath)
+
+# sup2, , auc_randomforest
+df = data.frame(auc_supermethod, auc_bagging, auc_xgboost)
+boxplot(df)
+
+dev.off()
