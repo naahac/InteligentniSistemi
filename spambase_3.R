@@ -236,58 +236,21 @@ for (i in 1:10) {
   auc_supermethod[i]<-test_auc
   
   conf_matrix<-table(glm.test.predict,test$is_spam)
-  conf_matrix
-  print(specificity(conf_matrix))
-  print(sensitivity(conf_matrix))
+  #conf_matrix
+  #print(specificity(conf_matrix))
+  #print(sensitivity(conf_matrix))
   
   # results.accuracy <- append(results.accuracy, misClasificError)
   
-  ########################### NEURAL FINAL PREDICT ####################
+  ########################### SVM FINAL PREDICT ####################
 
-  # n <- names(data)
-  # s <- paste(n[!n %in% "is_spam"], collapse = " + ")
-  # formula <- as.formula(paste("is_spam ~", s))
-  # neural.model <-
-  #   neuralnet(
-  #     formula,
-  #     data = train,
-  #     hidden = c(3,2) ,
-  #     linear.output = F
-  #   )
-  # 
-  # neural.pred = compute(neural.model, subset(test, select=-c(is_spam)))
-  # neural.res <- neural.pred[["net.result"]]
-  # res_roc <- roc(test$is_spam,
-  #                neural.res[,1],
-  #                percent = TRUE,
-  #                plot = TRUE)
+  svm.model <- svm(is_spam ~ ., data = train, type = "C-classification")
+  svm.pred <- predict(svm.model, test)
 
-  #neural.threshold <- coords(res_roc, "best", ret = "threshold")
-  # fit_auc <- round(auc(res_roc), 3)
-  # auc_supermethod2[i]<-fit_auc
-  # 
-  # plot(neural.model)
-  # neural.pred = compute(neural.model, subset(train, select=-c(is_spam)))
-  # neural.res <- neural.pred[["net.result"]]
-  # 
-  # res_roc <- roc(test$is_spam,
-  #                neural.res[,1],
-  #                percent = TRUE,
-  #                plot = TRUE)
-  # neural.threshold <- coords(res_roc, "best", ret = "threshold")
-  # 
-  # neural.test.pred = compute(neural.model, subset(test, select=-c(is_spam)))
-  # 
-  # neural.test.res <- neural.test.pred[["net.result"]]
-  # neural.test.res[neural.test.res < neural.threshold] <- 0
-  # neural.test.res[neural.test.res >= neural.threshold] <- 1
-  # 
-  # res_roc <- roc(test_orig$is_spam, neural.test.res)
-  # fit_auc <- round(auc(res_roc), 3)
-  # auc_supermethod2[i]<-fit_auc
-  # 
-  # misClasificError <- mean(neural.test.res != test$is_spam)
-  # print(paste('Accuracy NEURAL TEST', 1 - misClasificError))
+  res_roc <- roc(test$is_spam, as.numeric(svm.pred))
+  fit_auc <- round(auc(res_roc), 3)
+  auc_supermethod2[i]<-fit_auc
+  
   #######################   BOOSTING #######################
 
   boost=gbm(is_spam ~ . ,data = train_orig,distribution = "gaussian",n.trees = 1000,
@@ -343,11 +306,12 @@ for (i in 1:10) {
                                           ntree=1000)
   
   randomForest.pred <- predict(randomForest.fit, test_orig)
-  randomForest.pred<-as.integer(as.logical(randomForest.pred))
+  randomForest.pred<-as.numeric(randomForest.pred)
+  randomForest.pred <- randomForest.pred - 1
   
-  # res_roc <- roc(test_orig$is_spam, randomForest.pred)
-  # fit_auc <- round(auc(res_roc), 3)
-  # auc_randomforest[i]<-fit_auc
+  res_roc <- roc(test_orig$is_spam, randomForest.pred)
+  fit_auc <- round(auc(res_roc), 3)
+  auc_randomforest[i]<-fit_auc
 
   misClasificError <- mean(randomForest.pred != as.factor(test_orig$is_spam))
   print(paste('Accuracy RANDOM FOREST test', 1 - misClasificError))
@@ -387,8 +351,7 @@ dir <- "D:\\"
 pdfPath <- file.path(dir, "mojpdf3.pdf")
 pdf(pdfPath)
 
-# sup2, , auc_randomforest
-df = data.frame(auc_supermethod, auc_bagging, auc_xgboost)
+df = data.frame(auc_supermethod, auc_supermethod2, auc_bagging, auc_randomforest, auc_xgboost )
 boxplot(df)
 
 dev.off()
